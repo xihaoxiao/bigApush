@@ -63,6 +63,10 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 
 飞书、Server酱、邮箱三个渠道都可选，**填哪个就推哪个，多个都填会同时推送**。
 
+> ⚠️ **凭据只走 GitHub Secrets，不要写进仓库里的配置文件。**
+> `config/config.yaml` 已从版本控制移除（`config/config.defaults.yaml` 是仓库内的非敏感默认配置）。
+> 本地开发请用 `config/config.local.yaml`（已 gitignore，模板见 `config/config.local.yaml.example`）。
+
 **飞书**
 
 1. 在飞书群中添加自定义机器人
@@ -109,7 +113,47 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 
 ## 配置说明
 
-### config/config.yaml
+### 配置文件加载顺序
+
+```
+config/config.defaults.yaml   ← 仓库内，非敏感配置（filters/trading/data_dir 等）
+        ↓ 覆盖
+config/config.yaml            ← 兼容旧路径（已 gitignore，CI 上不存在）
+        ↓ 覆盖
+config/config.local.yaml      ← 本地凭据（已 gitignore，永不提交）
+        ↓ 覆盖
+环境变量 / GitHub Secrets      ← 最高优先级
+```
+
+由 `utils/config_loader.py` 统一负责，所有入口（`main.py` / `web_server.py` /
+`daily_news.py` / `evening_news.py`）共用。
+
+### 本地开发
+
+```bash
+# 复制凭据模板并填入（该文件不会被提交）
+cp config/config.local.yaml.example config/config.local.yaml
+```
+
+### config/config.defaults.yaml（仓库内，非敏感）
+
+```yaml
+# 数据更新配置
+update:
+  lookback_days: 10
+
+# 股票过滤配置
+filters:
+  min_market_cap: 10      # 最小市值（亿）
+  max_market_cap: 10000   # 最大市值（亿）
+  exclude_st: true        # 排除ST股票
+
+# 交易配置
+trading:
+  initial_capital: 300000.0
+```
+
+### config/config.local.yaml（本地凭据，不提交）
 
 ```yaml
 # 飞书机器人配置（可选）
@@ -130,16 +174,6 @@ email:
   to: ""
   use_ssl: true
   use_tls: false
-
-# 数据更新配置
-update:
-  lookback_days: 10
-
-# 股票过滤配置
-filters:
-  min_market_cap: 10      # 最小市值（亿）
-  max_market_cap: 10000   # 最大市值（亿）
-  exclude_st: true        # 排除ST股票
 ```
 
 推送渠道也可以用环境变量配置，且优先级高于配置文件：
@@ -151,6 +185,39 @@ filters:
 | 邮箱 | `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASSWORD` `SMTP_FROM` `SMTP_TO` `SMTP_USE_SSL` `SMTP_USE_TLS` |
 
 三个渠道相互独立，任意一个配置完整就推送，全部配置则同时推送。
+
+## 定时触发（Cloudflare Worker）
+
+GitHub Actions 自带的 `schedule` 事件高峰期会延迟 5-30 分钟。
+项目内置一个 Cloudflare Worker，用 Cloudflare Cron（秒级精度）准时触发
+GitHub 的 `workflow_dispatch`，让推送准点到达。
+
+```
+Cloudflare Cron (UTC 00:00 / 07:10 / 14:30)
+        └──> Worker.scheduled()
+                 └──> POST api.github.com/repos/xihaoxiao/bigApush/actions/workflows/{file}/dispatches
+                          └──> GitHub Actions (event = workflow_dispatch)
+```
+
+| Cloudflare Cron (UTC) | 北京时间 | 触发的工作流 |
+|----------------------|----------|--------------|
+| `0 0 * * *` | 08:00 | `morning-news.yml` 早间新闻 |
+| `10 7 * * 1-5` | 15:10 | `selection.yml` 收盘选股 |
+| `30 14 * * *` | 22:30 | `evening-news.yml` 晚间新闻 |
+
+部署见 [`deploy/cloudflare-scheduler/README.md`](deploy/cloudflare-scheduler/README.md)：
+
+```bash
+cd deploy/cloudflare-scheduler
+npm install
+npx wrangler secret put GH_TOKEN
+npx wrangler secret put TRIGGER_TOKEN
+npx wrangler deploy
+```
+
+> GitHub 自带的 `schedule` 保留作兜底（Worker 挂了还能补推）。
+> Worker 名字必须是 `bigapush-scheduler`，与其它项目（如 lianghua 的 `lianhua`）**不能重名**，
+> 否则会新建第二个 Worker → 重复触发。
 
 ## 本地运行
 
@@ -238,11 +305,12 @@ python main.py web
 ├── sector_data.py       # 板块数据获取
 ├── daily_news.py        # 早间新闻脚本
 ├── evening_news.py      # 晚间新闻脚本
-├── config/              # 配置文件
+├── config/              # 配置文件（defaults 提交，local 不提交）
 ├── strategy/            # 选股策略
 ├── trading/             # 交易相关
 ├── utils/               # 工具函数
 ├── web/                 # Web前端
+├── deploy/              # 部署脚本（Cloudflare Worker 等）
 ├── data/                # 数据文件（不上传）
 └── .github/workflows/   # GitHub Actions配置
 ```

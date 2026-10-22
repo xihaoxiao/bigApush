@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install requests
+      - run: pip install requests PyYAML
       - name: Push morning news
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}

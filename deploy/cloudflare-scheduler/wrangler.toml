@@ -1,0 +1,42 @@
+# Cloudflare Worker 配置（bigApush 定时触发器）
+#
+# Worker 名必须与 Dashboard 里已存在的那个一致，否则 `wrangler deploy`
+# 会新建另一个 Worker，结果就是两个 Worker 各带一条 cron → 重复触发。
+# 注意：不要和 lianghua 项目的 Worker（lianhua）同名。
+name = "bigapush-scheduler"
+main = "src/index.js"
+compatibility_date = "2026-10-22"
+workers_dev = true
+
+# Workers Logs：Dashboard → bigapush-scheduler → Logs 可见
+[observability]
+enabled = true
+
+[vars]
+GITHUB_OWNER = "xihaoxiao"
+GITHUB_REPO = "bigApush"
+GITHUB_REF = "main"
+
+# cron 表达式 -> 工作流文件（JSON）。
+# 哪个 cron 触发，就跑对应的 workflow；cron 不在表里时回退到 WORKFLOW_FILE。
+WORKFLOWS = '{"0 0 * * *":"morning-news.yml","10 7 * * 1-5":"selection.yml","30 14 * * *":"evening-news.yml"}'
+
+# 手动 /trigger 未指定 workflow 时使用的工作流
+WORKFLOW_FILE = "selection.yml"
+
+# Cloudflare cron 一律按 UTC 解释，不要填北京时间：
+#   00:00 UTC = 08:00 北京  早间新闻
+#   07:10 UTC = 15:10 北京  收盘选股
+#   14:30 UTC = 22:30 北京  晚间新闻
+#
+# GitHub 自带的 schedule 事件保留作兜底（concurrency group + artifact 去重防重复推送）
+[triggers]
+crons = ["0 0 * * *", "10 7 * * 1-5", "30 14 * * *"]
+
+# Secrets 不能写在这里（会明文进仓库），用命令设置：
+#   npx wrangler secret put GH_TOKEN        # GitHub PAT
+#   npx wrangler secret put TRIGGER_TOKEN   # 随机串，保护 /trigger 端点
+#
+# GH_TOKEN 权限要求：
+#   fine-grained PAT → Repository permissions → Actions: Read and write
+#   classic PAT      → 勾选 repo scope

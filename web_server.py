@@ -1100,10 +1100,9 @@ def run_selection():
         filter_stats = {}
         try:
             func_logger.info("应用过滤条件...")
-            # 直接从配置文件读取过滤配置
-            import yaml
-            with open('config/config.yaml', 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
+            # 从统一配置加载器读取过滤配置
+            from utils.config_loader import load_config
+            config = load_config()
             filter_config = config.get('filters', {})
             stock_filter = StockFilter(filter_config)
             
@@ -1281,9 +1280,8 @@ def run_selection():
         # 飞书 / Server酱推送选股结果（按已配置的渠道，可同时推送）
         try:
             from utils.push_notifier import push_text
-            import yaml as _yaml
-            with open('config/config.yaml', 'r', encoding='utf-8') as _f:
-                _cfg = _yaml.safe_load(_f) or {}
+            from utils.config_loader import load_config
+            _cfg = load_config()
             _lines = [f"📊 缅A每日推送 ({dt.now().strftime('%Y-%m-%d %H:%M:%S')})", ""]
             _total = 0
             _all_stocks = []

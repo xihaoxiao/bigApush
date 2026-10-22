@@ -94,18 +94,12 @@ def get_news(count=10):
 
 
 def _load_config():
-    """读取 config/config.yaml（缺失时返回空配置）"""
+    """读取配置（defaults → config.yaml → config.local.yaml）"""
     try:
-        import yaml
-        config_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config", "config.yaml"
-        )
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                return yaml.safe_load(f) or {}
+        from utils.config_loader import load_config
+        return load_config()
     except Exception:
-        pass
-    return {}
+        return {}
 
 
 def send_push(msg):

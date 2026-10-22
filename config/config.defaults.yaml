@@ -1,0 +1,44 @@
+# ============================================
+# A股量化选股系统 - 默认配置（提交到仓库）
+# ============================================
+# 本文件只包含【非敏感】配置，可以安全提交。
+#
+# 凭据（飞书 Webhook / Server酱 SendKey / 邮箱密码）请放：
+#   1. config/config.local.yaml（本地，已 gitignore）—— 或
+#   2. 环境变量 / GitHub Secrets（CI 推荐）
+#
+# 加载顺序：config.defaults.yaml → config.yaml → config.local.yaml → 环境变量
+# ============================================
+
+data_dir: data
+
+# 定时任务配置（仅本地 schedule 命令使用）
+schedule:
+  time: "17:00"  # 每日执行时间
+
+# 数据更新配置
+update:
+  lookback_days: 10
+  skip_failed: true
+
+# 股票过滤配置
+filters:
+  # 最小市值（亿元）
+  min_market_cap: 10
+  # 最大市值（亿元）
+  max_market_cap: 10000
+  # 最小流通股本（亿股）
+  min_float_shares: 1
+  # 最大流通股本（亿股）
+  max_float_shares: 100
+  # 排除新股（上市天数）
+  exclude_new_stock_days: 60
+  # 排除ST股票
+  exclude_st: true
+  # 排除退市风险股票
+  exclude_delisting_risk: true
+
+# 交易配置
+trading:
+  # 初始资金（元）
+  initial_capital: 300000.0

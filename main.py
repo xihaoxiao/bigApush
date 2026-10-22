@@ -64,12 +64,13 @@ class QuantSystem:
         self.csv_manager = CSVManager(self.data_dir)
     
     def _load_config(self, config_file):
-        """加载配置文件"""
-        config_path = Path(config_file)
-        if config_path.exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f) or {}
-        return {}
+        """加载配置文件
+
+        加载顺序：config.defaults.yaml → config.yaml → config.local.yaml
+        凭据只允许来自 config.local.yaml 或环境变量 / GitHub Secrets。
+        """
+        from utils.config_loader import load_config
+        return load_config()
     
 
     def _load_stock_names(self, stock_data):
