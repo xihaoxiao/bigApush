@@ -241,18 +241,40 @@ def calculate_zhixing_trend(df, m1=14, m2=28, m3=57, m4=114):
     
     参数:
         m1, m2, m3, m4: 多空线计算用的MA周期，默认14, 28, 57, 114
+
+    顺序说明：
+        MA()/EMA() 内部假定输入是【倒序】（最新在前），会先反转再算。
+        而调用方（multi_party_cannon、pattern_feature_extractor）传的是
+        【升序】数据，早期版本因此算出了镜像指标（窗口方向相反）。
+        本函数现在自动识别输入顺序，输出始终与输入行对齐。
     """
+    # 统一在倒序数据上计算（MA/EMA 的前提）
+    is_desc = False
+    if df is not None and len(df) > 1 and 'date' in df.columns:
+        try:
+            is_desc = df['date'].iloc[0] > df['date'].iloc[1]
+        except TypeError:
+            is_desc = str(df['date'].iloc[0]) > str(df['date'].iloc[1])
+
+    work = df if is_desc else df.iloc[::-1]
+
     # 知行短期趋势线 = EMA(EMA(CLOSE,10),10)
-    short_term_trend = EMA(EMA(df['close'], 10), 10)
-    
+    short_term_trend = EMA(EMA(work['close'], 10), 10)
+
     # 知行多空线 = (MA(m1) + MA(m2) + MA(m3) + MA(m4)) / 4
-    bull_bear_line = (MA(df['close'], m1) + MA(df['close'], m2) + 
-                      MA(df['close'], m3) + MA(df['close'], m4)) / 4
-    
-    return pd.DataFrame({
+    bull_bear_line = (MA(work['close'], m1) + MA(work['close'], m2) +
+                      MA(work['close'], m3) + MA(work['close'], m4)) / 4
+
+    result = pd.DataFrame({
         'short_term_trend': short_term_trend,
         'bull_bear_line': bull_bear_line
-    }, index=df.index)
+    }, index=work.index)
+
+    # 输出与输入保持同样的行顺序
+    if not is_desc:
+        result = result.iloc[::-1]
+
+    return result
 
 
 def MACD(df, fastperiod=12, slowperiod=26, signalperiod=9):

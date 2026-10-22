@@ -117,6 +117,41 @@ class BaseStrategy(ABC):
         :return: 添加了指标列的DataFrame
         """
         pass
+
+    # ------------------------------------------------------------------
+    # 数据顺序工具
+    #
+    # 契约：框架传入的 df 是倒序的（index 0 = 最新），
+    #      calculate_indicators 的输出也必须是倒序的 ——
+    #      main.py / web_server.py / stock_filter.py 都用 df.iloc[0] 取"当前价"。
+    #
+    # 指标计算则应在升序（最旧在前）上进行，否则 rolling/ewm 的
+    # 窗口方向会反，fillna 的填充方向也会把未来数据带进来。
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_descending(df) -> bool:
+        """判断 df 是否按日期倒序（index 0 = 最新）。"""
+        if df is None or len(df) < 2 or 'date' not in df.columns:
+            return False
+        try:
+            return df['date'].iloc[0] > df['date'].iloc[1]
+        except TypeError:
+            return str(df['date'].iloc[0]) > str(df['date'].iloc[1])
+
+    @classmethod
+    def _to_ascending(cls, df):
+        """转为升序（最旧在前）。已是升序则原样返回。"""
+        if cls._is_descending(df):
+            return df.iloc[::-1].reset_index(drop=True)
+        return df
+
+    @classmethod
+    def _to_descending(cls, df):
+        """转为倒序（最新在前）。已是倒序则原样返回。"""
+        if not cls._is_descending(df):
+            return df.iloc[::-1].reset_index(drop=True)
+        return df
     
     @abstractmethod
     def select_stocks(self, df, stock_name='') -> list:

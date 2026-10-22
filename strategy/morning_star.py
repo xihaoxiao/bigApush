@@ -50,8 +50,18 @@ class MorningStarStrategy(BaseStrategy):
     def calculate_indicators(self, df) -> pd.DataFrame:
         """
         计算启明星策略所需的指标
+
+        注意：框架传入的 df 是【倒序】的（index 0 = 最新）。
+        早期版本直接在倒序数据上做 rolling() 与 shift(1)：
+          - rolling 窗口方向反了，最新一行的 ma5 恒为 NaN
+            → _is_morning_star_pattern 里的 `pd.isna(ma5)` 直接 return False
+            → 该策略永远无法产生任何信号
+          - shift(1) 取到的是"更新"的一行，量比引入了未来数据
+
+        正确做法：转升序计算指标，再转回倒序输出。
         """
-        result = df.copy()
+        # 转为升序（最旧在前）计算指标
+        result = self._to_ascending(df.copy())
 
         # 计算K线实体大小（百分比幅度）
         # 实体 = |close - open| / open，表示涨跌幅
@@ -60,24 +70,23 @@ class MorningStarStrategy(BaseStrategy):
         # 计算K线方向（1=阳线，-1=阴线）
         result['candle_direction'] = (result['close'] > result['open']).astype(int) * 2 - 1
 
-        # 计算成交量比例
+        # 计算成交量比例（升序下 shift(1) = 前一日，安全）
         result['volume_ratio'] = result['volume'] / result['volume'].shift(1)
 
         # 计算5日均线
         result['ma5'] = result['close'].rolling(window=5).mean()
 
         # 填充缺失值
-        # 注意：此策略使用正序数据（index=0是最早日期）
-        # 对于正序数据：ffill()使用历史数据（安全），bfill()使用未来数据（未来函数）
-        # 所以只使用ffill()向前填充
-        # result = result.ffill().bfill()  # ⚠️ bfill是未来函数！
+        # 升序数据下：ffill() 用更早(更老)的数据填充（安全）
+        #              bfill() 用更晚(更新)的数据填充（未来函数）
         result = result.ffill()
 
         # 计算市值
         if 'market_cap' not in result.columns:
             result['market_cap'] = result['close'] * 2e8
 
-        return result
+        # 转回倒序（最新在前）—— 框架契约
+        return self._to_descending(result)
 
     def get_selection_criteria(self):
         """

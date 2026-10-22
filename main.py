@@ -256,7 +256,7 @@ class QuantSystem:
 
         results = {}
         indicators_dict = {}
-        category_count = {}
+        all_signal_list = []
 
         def _run_strategy(item):
             sname, sobj = item
@@ -268,11 +268,11 @@ class QuantSystem:
                     if sl:
                         for s in sl:
                             cat = s.get('category', 'unknown')
-                            category_count[cat] = category_count.get(cat, 0) + 1
                             if category == 'all' or cat == category:
                                 sigs.append({'code': code, 'name': name, 'signals': [s]})
                                 if return_data:
                                     indicators_dict[code] = df_ind
+                            all_signal_list.append(s)
                 except Exception:
                     pass
             return sname, sigs
@@ -302,11 +302,12 @@ class QuantSystem:
                     print(f"  {cat_emoji} {code} {name}: 价格={s.get('close','-')}, J={s.get('J','-')}, 理由={s.get('reasons','-')}")
         
         # 显示分类统计
+        from utils.category_stats import summarize_categories, format_category_lines
+        category_summary = summarize_categories(all_signal_list)
         print("\n" + "-" * 60)
         print("分类统计:")
-        print(f"  🥣 回落碗中: {category_count.get('bowl_center', 0)} 只")
-        print(f"  📊 靠近多空线: {category_count.get('near_duokong', 0)} 只")
-        print(f"  📈 靠近短期趋势线: {category_count.get('near_short_trend', 0)} 只")
+        for line in format_category_lines(category_summary):
+            print(line)
         print("-" * 60)
         
         # 应用过滤条件

@@ -74,7 +74,10 @@ class Strategy2560Selection(BaseStrategy):
         result['vol_ma5'] = result['volume'].rolling(window=vol_ma_short, min_periods=1).mean()
         result['vol_ma60'] = result['volume'].rolling(window=vol_ma_long, min_periods=1).mean()
 
-        return result
+        # 返回倒序数据（最新在前）—— 框架契约：
+        # main.py / stock_filter.py 都用 df.iloc[0] 取"当前价"，
+        # 早期版本返回正序，导致下游取到的是最老一行。
+        return self._to_descending(result)
 
     def select_stocks(self, df, stock_name="", skip_data_check=False):
         if not skip_data_check:
@@ -82,6 +85,9 @@ class Strategy2560Selection(BaseStrategy):
                 return []
 
         result = self.calculate_indicators(df)
+
+        # 本策略内部逻辑按升序（最旧在前）编写，这里统一转换一次
+        result = self._to_ascending(result)
 
         latest = result.iloc[-1]
         prev = result.iloc[-2]

@@ -89,10 +89,11 @@ class TrendStartStrategy(BaseStrategy):
         result['ma5_volume'] = result['volume'].rolling(window=ma5_period).mean()
         
         # 填充缺失值
-        # 注意：只使用bfill()向后填充，避免引入未来函数
-        # ffill()会使用未来数据填充NaN，导致回测结果失真
-        # result = result.ffill().bfill()  # ⚠️ ffill是未来函数！
-        result = result.bfill()
+        # 注意：此处数据已是【升序】（最旧在前）
+        #   ffill() = 用更早(更老)的数据填充 → 安全
+        #   bfill() = 用更晚(更新)的数据填充 → 未来函数！
+        # 早期版本误用 bfill()，注释里的语义也写反了。
+        result = result.ffill()
         
         # 反转回倒序（最新在前），以符合策略其他方法的预期
         result = result.iloc[::-1].reset_index(drop=True)

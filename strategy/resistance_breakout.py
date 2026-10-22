@@ -76,8 +76,10 @@ class ResistanceBreakoutStrategy(BaseStrategy):
         result['ma_mid'] = result['close'].rolling(window=ma_mid_period).mean()
         result['ma_long'] = result['close'].rolling(window=ma_long_period).mean()
 
-        # 始终返回正序数据
-        return result
+        # 返回倒序数据（最新在前）—— 框架契约：
+        # main.py / stock_filter.py 都用 df.iloc[0] 取"当前价"，
+        # 早期版本返回正序，导致下游取到的是最老一行。
+        return self._to_descending(result)
     
     def get_selection_criteria(self):
         """获取选股条件描述"""
@@ -121,6 +123,9 @@ class ResistanceBreakoutStrategy(BaseStrategy):
         # 数据检查
         if df is None or df.empty or len(df) < 70:
             return []
+
+        # 本策略内部逻辑按升序（最旧在前）编写，这里统一转换一次
+        df = self._to_ascending(df)
 
         # 检查数据是否过时（最新数据距今超过5年）
         try:
