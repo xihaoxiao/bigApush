@@ -691,7 +691,7 @@ B1完美图形匹配:
 
     # 检查命令是否提供
     if not args.command:
-        print("未指定命令，默认执行选股并推送飞书...")
+        print("未指定命令，默认执行选股并推送...")
         args.command = 'run'
     
     # 切换工作目录
@@ -729,12 +729,9 @@ B1完美图形匹配:
                 # 原有选股流程（不带B1匹配）
                 result = quant.run_full(category=args.category, max_stocks=args.max_stocks)
 
-            # 飞书推送
+            # 飞书 / Server酱推送（按已配置的渠道，可同时推送）
             if result:
-                from utils.feishu_notifier import FeishuNotifier
-                feishu_cfg = quant.config.get('feishu', {})
-                webhook_url = os.environ.get('FEISHU_WEBHOOK') or feishu_cfg.get('webhook_url', '')
-                notifier = FeishuNotifier(webhook_url)
+                from utils.push_notifier import push_text
 
                 # 加载策略中文名称映射
                 display_names = {}
@@ -904,7 +901,7 @@ B1完美图形匹配:
                     print(f"  ⚠️ 获取大盘数据失败: {_idx_err}")
 
                 lines.insert(1, f"共 {total} 只股票入选")
-                notifier.send_text("\n".join(lines))
+                push_text("\n".join(lines), quant.config)
     
     elif args.command == 'web':
         # 启动Web服务器

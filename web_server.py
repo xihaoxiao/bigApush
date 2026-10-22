@@ -1278,15 +1278,12 @@ def run_selection():
                 # 匹配失败时返回原始结果
                 pass
         
-        # 飞书推送选股结果
+        # 飞书 / Server酱推送选股结果（按已配置的渠道，可同时推送）
         try:
-            from utils.feishu_notifier import FeishuNotifier
+            from utils.push_notifier import push_text
             import yaml as _yaml
             with open('config/config.yaml', 'r', encoding='utf-8') as _f:
-                _cfg = _yaml.safe_load(_f)
-            _feishu_cfg = _cfg.get('feishu', {})
-            _webhook_url = os.environ.get('FEISHU_WEBHOOK') or _feishu_cfg.get('webhook_url', '')
-            _notifier = FeishuNotifier(_webhook_url)
+                _cfg = _yaml.safe_load(_f) or {}
             _lines = [f"📊 缅A每日推送 ({dt.now().strftime('%Y-%m-%d %H:%M:%S')})", ""]
             _total = 0
             _all_stocks = []
@@ -1446,12 +1443,12 @@ def run_selection():
                 func_logger.warning(f"获取大盘数据失败: {_idx_err}")
 
             if _total > 0:
-                _notifier.send_text("\n".join(_lines))
-                func_logger.info(f"飞书推送完成，共 {_total} 只股票入选")
+                _push_result = push_text("\n".join(_lines), _cfg)
+                func_logger.info(f"推送完成 {_push_result}，共 {_total} 只股票入选")
             else:
-                func_logger.info("选股结果为空，跳过飞书推送")
+                func_logger.info("选股结果为空，跳过推送")
         except Exception as _fe:
-            func_logger.warning(f"飞书推送失败: {_fe}")
+            func_logger.warning(f"推送失败: {_fe}")
 
         return jsonify({
             'success': True,

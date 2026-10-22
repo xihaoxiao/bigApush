@@ -92,18 +92,15 @@ def get_news(count=10):
     return lines
 
 
-def send_feishu(msg):
-    """发送飞书消息"""
-    webhook = os.environ.get("FEISHU_WEBHOOK", "")
-    if not webhook:
-        print("FEISHU_WEBHOOK 未设置")
+def send_push(msg):
+    """推送到已配置的渠道（飞书 / Server酱，可同时推送）"""
+    from utils.push_notifier import push_text
+
+    result = push_text(msg)
+    if all(value is None for value in result.values()):
+        print("未配置 FEISHU_WEBHOOK 或 SERVERCHAN_SENDKEY")
         return False
-    resp = requests.post(
-        webhook,
-        json={"msg_type": "text", "content": {"text": msg}},
-        timeout=10,
-    )
-    return resp.json().get("code") == 0
+    return any(result.values())
 
 
 def main():
@@ -144,7 +141,7 @@ def main():
 
     # 发送
     msg = "\n".join(lines)
-    if send_feishu(msg):
+    if send_push(msg):
         print(f"✅ 晚间新闻推送成功 ({now.strftime('%H:%M:%S')})")
     else:
         print("❌ 推送失败")

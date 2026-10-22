@@ -19,6 +19,12 @@ dingtalk:
 feishu:
   webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/ef0d8206-3c26-4fa0-9401-138f997db920"
 
+# Server酱配置（可选，与飞书可同时推送）
+# 在 https://sct.ftqq.com 获取 SendKey，填入下方
+# 也可用环境变量 SERVERCHAN_SENDKEY 覆盖
+serverchan:
+  sendkey: ""
+
 # 定时任务配置
 schedule:
   time: "17:00"  # 每日执行时间

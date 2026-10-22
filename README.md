@@ -12,7 +12,7 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 - **新增/去除对比**：每日对比上个交易日选股变化
 - **买入建议分析**：基于技术指标（均线/RSI/MACD）给每只股票评分
 - **交易日判断**：自动识别A股交易日，非交易日跳过
-- **飞书推送**：选股结果 + 分析报告自动发送到飞书群
+- **多渠推送**：选股结果 + 分析报告自动发送到飞书 / Server酱（填哪个推哪个，可同时推送）
 
 ## 15种选股策略
 
@@ -59,12 +59,22 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 
 点击右上角 Fork 按钮，将仓库复制到你的 GitHub 账号下。
 
-### 2. 配置飞书 Webhook
+### 2. 配置推送渠道
+
+飞书和 Server酱 都可选，**填哪个就推哪个，两个都填会同时推送**。
+
+**飞书**
 
 1. 在飞书群中添加自定义机器人
 2. 复制 Webhook URL
 3. 进入仓库 → Settings → Secrets and variables → Actions
 4. 新建 Secret：`FEISHU_WEBHOOK`，值为你的 Webhook URL
+
+**Server酱**
+
+1. 打开 <https://sct.ftqq.com>，微信扫码登录后获取 SendKey（Server酱 Turbo / Server酱³ 均支持）
+2. 进入仓库 → Settings → Secrets and variables → Actions
+3. 新建 Secret：`SERVERCHAN_SENDKEY`，值为你的 SendKey
 
 ### 3. 启用 Actions
 
@@ -79,9 +89,13 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 ### config/config.yaml
 
 ```yaml
-# 飞书机器人配置
+# 飞书机器人配置（可选）
 feishu:
   webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxx"
+
+# Server酱配置（可选，与飞书可同时推送）
+serverchan:
+  sendkey: "SCTxxxxx"
 
 # 数据更新配置
 update:
@@ -93,6 +107,13 @@ filters:
   max_market_cap: 10000   # 最大市值（亿）
   exclude_st: true        # 排除ST股票
 ```
+
+推送渠道也可以用环境变量配置，且优先级高于配置文件：
+
+| 渠道 | 环境变量 |
+|------|----------|
+| 飞书 | `FEISHU_WEBHOOK` |
+| Server酱 | `SERVERCHAN_SENDKEY`（兼容 `SERVER_CHAN_SENDKEY` / `SCKEY`） |
 
 ## 本地运行
 
