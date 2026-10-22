@@ -19,11 +19,25 @@ dingtalk:
 feishu:
   webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/ef0d8206-3c26-4fa0-9401-138f997db920"
 
-# Server酱配置（可选，与飞书可同时推送）
+# Server酱配置（可选，与飞书/邮箱可同时推送）
 # 在 https://sct.ftqq.com 获取 SendKey，填入下方
 # 也可用环境变量 SERVERCHAN_SENDKEY 覆盖
 serverchan:
   sendkey: ""
+
+# 邮箱推送配置（可选，与飞书/Server酱可同时推送）
+# 通用 SMTP，QQ/163/Gmail/Outlook 均可
+# QQ/163 邮箱的 password 要填"授权码"而不是登录密码
+# 也可用环境变量 SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_TO 覆盖
+email:
+  host: ""
+  port: 465
+  user: ""
+  password: ""
+  from: ""
+  to: ""
+  use_ssl: true
+  use_tls: false
 
 # 定时任务配置
 schedule:

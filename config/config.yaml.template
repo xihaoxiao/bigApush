@@ -13,11 +13,25 @@ data_dir: data
 feishu:
   webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_WEBHOOK_HERE"
 
-# Server酱配置（可选，与飞书可同时使用）
+# Server酱配置（可选，与飞书/邮箱可同时使用）
 # 在 https://sct.ftqq.com 获取 SendKey（Server酱 Turbo / Server酱³ 均支持）
 # 也可用环境变量 SERVERCHAN_SENDKEY 覆盖
 serverchan:
   sendkey: ""
+
+# 邮箱推送配置（可选，与飞书/Server酱可同时使用）
+# 通用 SMTP，QQ/163/Gmail/Outlook 均可
+# 注意：QQ/163 邮箱的密码要填"授权码"而不是登录密码
+# 也可用环境变量 SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_TO 覆盖
+email:
+  host: ""            # 例如 smtp.qq.com
+  port: 465           # 465=SSL，587=STARTTLS，留空按 host 自动推断
+  user: ""            # 登录账号（QQ 填完整邮箱地址）
+  password: ""        # 授权码/密码
+  from: ""            # 发件人地址，留空则用 user
+  to: ""              # 收件人，多个用逗号分隔，留空则发给 user
+  use_ssl: true       # 465 端口用 true，587 端口用 false
+  use_tls: false
 
 # 钉钉机器人配置（旧版，保留兼容）
 # 1. 在钉钉群中添加自定义机器人

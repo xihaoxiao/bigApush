@@ -93,13 +93,28 @@ def get_news(count=10):
     return lines
 
 
+def _load_config():
+    """读取 config/config.yaml（缺失时返回空配置）"""
+    try:
+        import yaml
+        config_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "config", "config.yaml"
+        )
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+    except Exception:
+        pass
+    return {}
+
+
 def send_push(msg):
-    """推送到已配置的渠道（飞书 / Server酱，可同时推送）"""
+    """推送到已配置的渠道（飞书 / Server酱 / 邮箱，可同时推送）"""
     from utils.push_notifier import push_text
 
-    result = push_text(msg)
+    result = push_text(msg, _load_config())
     if all(value is None for value in result.values()):
-        print("未配置 FEISHU_WEBHOOK 或 SERVERCHAN_SENDKEY")
+        print("未配置 FEISHU_WEBHOOK / SERVERCHAN_SENDKEY / SMTP_HOST 等推送渠道")
         return False
     return any(result.values())
 

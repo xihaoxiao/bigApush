@@ -12,7 +12,7 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 - **新增/去除对比**：每日对比上个交易日选股变化
 - **买入建议分析**：基于技术指标（均线/RSI/MACD）给每只股票评分
 - **交易日判断**：自动识别A股交易日，非交易日跳过
-- **多渠推送**：选股结果 + 分析报告自动发送到飞书 / Server酱（填哪个推哪个，可同时推送）
+- **多渠推送**：选股结果 + 分析报告自动发送到飞书 / Server酱 / 邮箱（填哪个推哪个，可同时推送）
 
 ## 15种选股策略
 
@@ -61,7 +61,7 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 
 ### 2. 配置推送渠道
 
-飞书和 Server酱 都可选，**填哪个就推哪个，两个都填会同时推送**。
+飞书、Server酱、邮箱三个渠道都可选，**填哪个就推哪个，多个都填会同时推送**。
 
 **飞书**
 
@@ -75,6 +75,29 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 1. 打开 <https://sct.ftqq.com>，微信扫码登录后获取 SendKey（Server酱 Turbo / Server酱³ 均支持）
 2. 进入仓库 → Settings → Secrets and variables → Actions
 3. 新建 Secret：`SERVERCHAN_SENDKEY`，值为你的 SendKey
+
+**邮箱（SMTP）**
+
+通用 SMTP，QQ邮箱 / 163 / Gmail / Outlook 都能用。
+
+1. 在邮箱设置里开启 SMTP 服务并获取授权码
+   - QQ邮箱：设置 → 账户 → 开启 SMTP → 生成授权码
+   - 163邮箱：设置 → POP3/SMTP/IMAP → 开启并获取授权码
+   - Gmail：需开启两步验证并生成"应用专用密码"
+2. 进入仓库 → Settings → Secrets and variables → Actions，新建以下 Secret：
+
+   | Secret | 示例 | 说明 |
+   |--------|------|------|
+   | `SMTP_HOST` | `smtp.qq.com` | SMTP 服务器 |
+   | `SMTP_PORT` | `465` | 465=SSL，587=STARTTLS，留空按 host 自动推断 |
+   | `SMTP_USER` | `you@qq.com` | 登录账号（QQ 填完整邮箱地址） |
+   | `SMTP_PASSWORD` | `abcdefghijkl` | **授权码**，不是登录密码 |
+   | `SMTP_FROM` | `you@qq.com` | 发件人，留空则用 `SMTP_USER` |
+   | `SMTP_TO` | `a@qq.com,b@163.com` | 收件人，逗号分隔，留空则发给 `SMTP_USER` |
+   | `SMTP_USE_SSL` | `true` | 465 端口填 `true`，587 端口填 `false` |
+   | `SMTP_USE_TLS` | `false` | 587 端口填 `true` |
+
+   > 密码一定要用**授权码**。用登录密码会报 `SMTPAuthenticationError`。
 
 ### 3. 启用 Actions
 
@@ -93,9 +116,20 @@ A股量化选股 + 每日自动推送系统，通过 GitHub Actions 实现全自
 feishu:
   webhook_url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxx"
 
-# Server酱配置（可选，与飞书可同时推送）
+# Server酱配置（可选，与飞书/邮箱可同时推送）
 serverchan:
   sendkey: "SCTxxxxx"
+
+# 邮箱推送配置（可选，与飞书/Server酱可同时推送）
+email:
+  host: "smtp.qq.com"
+  port: 465
+  user: "you@qq.com"
+  password: "your_授权码"
+  from: ""
+  to: ""
+  use_ssl: true
+  use_tls: false
 
 # 数据更新配置
 update:
@@ -114,6 +148,9 @@ filters:
 |------|----------|
 | 飞书 | `FEISHU_WEBHOOK` |
 | Server酱 | `SERVERCHAN_SENDKEY`（兼容 `SERVER_CHAN_SENDKEY` / `SCKEY`） |
+| 邮箱 | `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASSWORD` `SMTP_FROM` `SMTP_TO` `SMTP_USE_SSL` `SMTP_USE_TLS` |
+
+三个渠道相互独立，任意一个配置完整就推送，全部配置则同时推送。
 
 ## 本地运行
 
