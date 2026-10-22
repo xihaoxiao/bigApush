@@ -54,6 +54,12 @@ def resolve_channels(config=None) -> dict:
     email_config = EmailConfig.from_env_and_config(config)
     if email_config.configured:
         channels["email"] = email_config
+    elif email_config.partially_configured:
+        # 有配置但不全：明确提示缺什么，避免"以为配好了却静默不推送"
+        logger.warning(
+            "邮箱推送配置不完整，已跳过。缺少: %s",
+            ", ".join(email_config.missing_fields),
+        )
 
     return channels
 

@@ -901,7 +901,14 @@ B1完美图形匹配:
                     print(f"  ⚠️ 获取大盘数据失败: {_idx_err}")
 
                 lines.insert(1, f"共 {total} 只股票入选")
-                push_text("\n".join(lines), quant.config)
+                _push_result = push_text("\n".join(lines), quant.config)
+                for _channel, _ok in _push_result.items():
+                    if _ok is None:
+                        print(f"  ⏭️  {_channel}: 未配置，跳过")
+                    elif _ok:
+                        print(f"  ✅ {_channel}: 推送成功")
+                    else:
+                        print(f"  ❌ {_channel}: 推送失败")
     
     elif args.command == 'web':
         # 启动Web服务器

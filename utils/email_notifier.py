@@ -56,6 +56,9 @@ class EmailConfig:
         self.password = (password or "").strip()
         self.sender = (sender or "").strip()
         self.to = [addr.strip() for addr in (to or "").replace(";", ",").split(",") if addr.strip()]
+        # 收件人留空时，默认发给登录账号（与 README 描述保持一致）
+        if not self.to and self.user:
+            self.to = [self.user]
 
         if port in (None, ""):
             self.port = DEFAULT_PORTS.get(self.host.lower(), 465)
@@ -82,13 +85,35 @@ class EmailConfig:
         """发送方 + 收件方 + 密码齐全才算可发送。"""
         return bool(self.host and self.user and self.password and self.to)
 
+    @property
+    def missing_fields(self) -> list:
+        """列出缺失的必填项（用于给出可操作的报错，而不是静默跳过）。"""
+        missing = []
+        if not self.host:
+            missing.append("SMTP_HOST")
+        if not self.user:
+            missing.append("SMTP_USER")
+        if not self.password:
+            missing.append("SMTP_PASSWORD")
+        if not self.to:
+            missing.append("SMTP_TO(或 SMTP_USER)")
+        return missing
+
+    @property
+    def partially_configured(self) -> bool:
+        """有配置但不全 —— 说明用户想用邮箱推送，只是缺了某几项。"""
+        return not self.configured and bool(
+            self.host or self.user or self.password or self.to or self.sender
+        )
+
     @classmethod
     def from_env_and_config(cls, config=None) -> "EmailConfig":
         config = config or {}
         email_cfg = config.get("email") or config.get("smtp") or {}
 
         host = _env("SMTP_HOST", "EMAIL_HOST") or str(email_cfg.get("host") or "")
-        port = _env("SMTP_PORT", "EMAIL_PORT") or email_cfg.get("port")
+        env_port = _env("SMTP_PORT", "EMAIL_PORT")
+        port = env_port or email_cfg.get("port")
         user = (_env("SMTP_USER", "EMAIL_USER", "SMTP_USERNAME")
                 or str(email_cfg.get("user") or email_cfg.get("username") or ""))
         password = (_env("SMTP_PASSWORD", "EMAIL_PASSWORD", "SMTP_PASS", "EMAIL_PASS")
@@ -98,8 +123,31 @@ class EmailConfig:
         to = (_env("SMTP_TO", "EMAIL_TO", "SMTP_RECIPIENTS")
               or str(email_cfg.get("to") or email_cfg.get("recipients") or ""))
 
-        use_ssl = _env("SMTP_USE_SSL", "EMAIL_USE_SSL") or email_cfg.get("use_ssl")
-        use_tls = _env("SMTP_USE_TLS", "EMAIL_USE_TLS") or email_cfg.get("use_tls")
+        env_use_ssl = _env("SMTP_USE_SSL", "EMAIL_USE_SSL")
+        env_use_tls = _env("SMTP_USE_TLS", "EMAIL_USE_TLS")
+
+        # SSL/TLS 决策优先级：
+        # 1) 环境变量显式指定 → 遵从
+        # 2) 端口由环境变量指定但没给 SSL/TLS 标志 → 按端口推断
+        #    （否则 config.yaml 里的 use_ssl: true 会把 587 端口也强制成 SSL）
+        # 3) 否则用配置文件的值 → 都没有则按端口推断
+        if env_use_ssl:
+            use_ssl = env_use_ssl
+        elif env_use_tls:
+            use_ssl = False         # 显式要 STARTTLS → 不再用隐式 SSL
+        elif env_port:
+            use_ssl = None          # 交给 __init__ 按端口推断
+        else:
+            use_ssl = email_cfg.get("use_ssl")
+
+        if env_use_tls:
+            use_tls = env_use_tls
+        elif env_use_ssl:
+            use_tls = False         # 显式要 SSL → 不再叠加 STARTTLS
+        elif env_port:
+            use_tls = None          # 交给 __init__ 按端口推断
+        else:
+            use_tls = email_cfg.get("use_tls")
 
         return cls(
             host=host,

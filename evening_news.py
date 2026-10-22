@@ -112,6 +112,13 @@ def send_push(msg):
     from utils.push_notifier import push_text
 
     result = push_text(msg, _load_config())
+    for channel, ok in result.items():
+        if ok is None:
+            print(f"  ⏭️  {channel}: 未配置，跳过")
+        elif ok:
+            print(f"  ✅ {channel}: 推送成功")
+        else:
+            print(f"  ❌ {channel}: 推送失败")
     if all(value is None for value in result.values()):
         print("未配置 FEISHU_WEBHOOK / SERVERCHAN_SENDKEY / SMTP_HOST 等推送渠道")
         return False
