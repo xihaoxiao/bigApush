@@ -121,7 +121,9 @@ def send_push(msg):
 
 
 def main():
-    now = datetime.now()
+    # 使用北京时间（CI runner 是 UTC）
+    from utils.time_utils import now_cn
+    now = now_cn()
     lines = []
 
     # 标题

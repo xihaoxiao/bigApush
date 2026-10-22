@@ -99,17 +99,24 @@ class QuantSystem:
         print("\n✓ 数据初始化完成")
 
     def _smart_update(self, max_stocks=None, check_latest=True):
-        """智能更新：3点前不更新，检查每只股票是否有当天数据"""
-        from datetime import datetime
+        """智能更新：收盘前不更新，检查每只股票是否有当天数据
+
+        时间判断一律使用北京时间（utils.time_utils）。
+        早期版本用 datetime.now()，在 GitHub Actions（UTC runner）上
+        会把北京时间 15:19 误判为"未收盘"，从而跳过数据更新，
+        导致推送内容基于前一日的旧 K 线。
+        """
+        from utils.time_utils import today_cn, is_after_close, describe
         import pandas as pd
+        from datetime import datetime
 
-        today = datetime.now().date()
-        current_time = datetime.now().time()
-        market_close_time = datetime.strptime("15:00", "%H:%M").time()
+        today = datetime.strptime(today_cn(), "%Y-%m-%d").date()
 
-        # 3点前：不更新，使用旧数据
-        if current_time < market_close_time:
-            print("\n⏰ 当前时间尚未收盘 (15:00)")
+        print(f"  {describe()}")
+
+        # 收盘前（北京时间 15:00）：不更新，使用旧数据
+        if not is_after_close():
+            print("\n⏰ 当前时间尚未收盘 (北京时间 15:00)")
             print("  使用本地已有数据，跳过网络更新")
             return
 
@@ -706,10 +713,10 @@ B1完美图形匹配:
         quant.init_data(max_stocks=args.max_stocks)
     
     elif args.command == 'run':
-            # 检查今天是否为交易日
+            # 检查今天是否为交易日（按北京时间判断）
             from utils.trade_date_utils import is_trading_day
-            from datetime import datetime
-            today_str = datetime.now().strftime('%Y-%m-%d')
+            from utils.time_utils import today_cn, now_cn_str
+            today_str = today_cn()
             if not is_trading_day(today_str):
                 print(f"今天 {today_str} 不是交易日，跳过选股")
                 sys.exit(0)
@@ -748,7 +755,7 @@ B1完美图形匹配:
                 except Exception:
                     pass
 
-                lines = [f"📊 缅A每日推送 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})", ""]
+                lines = [f"📊 缅A每日推送 ({now_cn_str()})", ""]
                 total = 0
                 all_stocks = []
                 if isinstance(result, dict):
@@ -775,7 +782,7 @@ B1完美图形匹配:
                         from datetime import date as _date
                         _srm = SelectionRecordManager()
                         _today_codes = {s['code'] for s in all_stocks}
-                        _today_str = datetime.now().strftime('%Y-%m-%d')
+                        _today_str = today_cn()
 
                         _prev_result = _srm.get_selection_history(
                             filters={'end_date': _today_str}, page=1, limit=5000
@@ -859,7 +866,7 @@ B1完美图形匹配:
                             pass
                     if _idx_lines:
                         lines.append("━━━━━━━━━━━━━━━━━━━━")
-                        lines.append(f"📈 今日大盘复盘 ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
+                        lines.append(f"📈 今日大盘复盘 ({now_cn_str()})")
                         lines.append("")
                         lines.extend(_idx_lines)
                         lines.append("")

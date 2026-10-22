@@ -13,6 +13,9 @@ from strategy.pattern_config import B1_PERFECT_CASES, SIMILARITY_WEIGHTS, MIN_SI
 from strategy.pattern_feature_extractor import PatternFeatureExtractor
 from strategy.pattern_matcher import PatternMatcher
 
+# 项目根目录（strategy/ 的上一级）
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 class B1PatternLibrary:
     """
@@ -22,8 +25,10 @@ class B1PatternLibrary:
     - 支持动态添加新案例
     - 为B2、B3等扩展预留空间
     """
-    
-    CACHE_FILE = Path("/root/quant-csv/data/b1_pattern_library_cache.json")
+
+    # 缓存放在项目内可写的 data/ 目录。
+    # 早期写死 /root/quant-csv/... 在 CI 上必然 Permission denied。
+    CACHE_FILE = _PROJECT_ROOT / "data" / "b1_pattern_library_cache.json"
     
     def __init__(self, csv_manager):
         self.csv_manager = csv_manager

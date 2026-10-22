@@ -5,6 +5,10 @@ on:
     - cron: '30 14 * * *'
   workflow_dispatch:
 
+# runner 默认是 UTC；显式设为北京时间，避免日志/时间判断出现偏差
+env:
+  TZ: Asia/Shanghai
+
 jobs:
   push-news:
     runs-on: ubuntu-latest

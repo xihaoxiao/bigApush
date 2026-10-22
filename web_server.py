@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 from datetime import datetime
 from utils.trade_date_utils import is_trading_day, get_previous_trading_day
+from utils.time_utils import now_cn, now_cn_str, today_cn
 from datetime import datetime as dt, timedelta
 import pandas as pd
 import numpy as np
@@ -677,9 +678,10 @@ def get_stock_detail(code):
                 else:
                     code_fmt = code
                 
-                # 获取最近400个交易日的数据
-                end_date = dt.now().strftime('%Y%m%d')
-                start_date = (dt.now() - timedelta(days=400)).strftime('%Y%m%d')
+                # 获取最近400个交易日的数据（按北京时间确定起止日期）
+                _now_cn = now_cn()
+                end_date = _now_cn.strftime('%Y%m%d')
+                start_date = (_now_cn - timedelta(days=400)).strftime('%Y%m%d')
                 
                 df = pro.daily(ts_code=code_fmt, start_date=start_date, end_date=end_date)
                 
@@ -861,9 +863,9 @@ def run_selection():
                 min_similarity = data.get('min_similarity', 60.0)  # 最小相似度阈值
                 lookback_days = data.get('lookback_days', 25)  # 回看天数
 
-                # 如果end_date为空，使用当前工作日期
+                # 如果end_date为空，使用当前工作日期（北京时间）
                 if not end_date:
-                    today = dt.now().strftime('%Y-%m-%d')
+                    today = today_cn()
                     end_date = today
                     func_logger.warning(f"⚠️ end_date为空，使用当前日期: {end_date}")
 
@@ -875,7 +877,7 @@ def run_selection():
             # 检查策略列表是否为空
             if strategies_to_run is not None and len(strategies_to_run) == 0:
                 func_logger.info("策略列表为空，返回空结果")
-                return jsonify({'success': True, 'data': {}, 'time': dt.now().strftime('%Y-%m-%d %H:%M:%S')})
+                return jsonify({'success': True, 'data': {}, 'time': now_cn_str()})
         
         # 加载股票数据
         try:
@@ -920,7 +922,7 @@ def run_selection():
         # 检查是否有可用的股票数据
         if not stock_data:
             func_logger.warning("没有可用的股票数据")
-            return jsonify({'success': True, 'data': {}, 'time': dt.now().strftime('%Y-%m-%d %H:%M:%S')})
+            return jsonify({'success': True, 'data': {}, 'time': now_cn_str()})
         
         results = {}
         
@@ -1269,7 +1271,7 @@ def run_selection():
                     },
                     'filter_stats': cleaned_filter_stats,
                     'b1_match': True,
-                    'time': dt.now().strftime('%Y-%m-%d %H:%M:%S')
+                    'time': now_cn_str()
                 })
             except Exception as e:
                 func_logger.error(f"执行B1完美图形匹配失败: {str(e)}")
@@ -1282,7 +1284,7 @@ def run_selection():
             from utils.push_notifier import push_text
             from utils.config_loader import load_config
             _cfg = load_config()
-            _lines = [f"📊 缅A每日推送 ({dt.now().strftime('%Y-%m-%d %H:%M:%S')})", ""]
+            _lines = [f"📊 缅A每日推送 ({now_cn_str()})", ""]
             _total = 0
             _all_stocks = []
 
@@ -1307,7 +1309,7 @@ def run_selection():
                     from utils.selection_record_manager import SelectionRecordManager
                     _srm = SelectionRecordManager()
                     _today_codes = {s['code'] for s in _all_stocks}
-                    _today_date = dt.now().strftime('%Y-%m-%d')
+                    _today_date = today_cn()
 
                     _prev_result = _srm.get_selection_history(
                         filters={'end_date': _today_date}, page=1, limit=5000
@@ -1394,7 +1396,7 @@ def run_selection():
                         pass
                 if _idx_lines:
                     _lines.append("━━━━━━━━━━━━━━━━━━━━")
-                    _lines.append(f"📈 今日大盘复盘 ({dt.now().strftime('%Y-%m-%d %H:%M:%S')})")
+                    _lines.append(f"📈 今日大盘复盘 ({now_cn_str()})")
                     _lines.append("")
                     _lines.extend(_idx_lines)
                     _lines.append("")
@@ -1453,8 +1455,8 @@ def run_selection():
             'data': cleaned_results,
             'filter_stats': cleaned_filter_stats,
             'b1_match': False,
-            'time': dt.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'selection_date': end_date if end_date else dt.now().strftime('%Y-%m-%d'),  # 添加选股日期
+            'time': now_cn_str(),
+            'selection_date': end_date if end_date else today_cn(),  # 添加选股日期
             'strategy_display_names': strategy_display_names  # 添加策略名称映射
         })
     
@@ -2025,7 +2027,7 @@ def trigger_update():
         global update_status
         try:
             update_status['running'] = True
-            update_status['start_time'] = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            update_status['start_time'] = now_cn_str()
             update_status['message'] = '正在更新数据...'
             emit_update_progress()
             
@@ -2034,12 +2036,12 @@ def trigger_update():
             
             update_status['success'] += 1
             update_status['message'] = '数据更新完成'
-            update_status['end_time'] = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            update_status['end_time'] = now_cn_str()
             emit_update_progress()
         except Exception as e:
             update_status['failed'] += 1
             update_status['message'] = f'更新失败: {str(e)}'
-            update_status['end_time'] = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            update_status['end_time'] = now_cn_str()
             emit_update_progress()
         finally:
             update_status['running'] = False
@@ -3736,7 +3738,7 @@ def get_portfolio():
         
         # 获取当前工作日期（用于信号）和当日日期（用于持仓）
         working_date = runner.get_working_date()
-        today = dt.now().strftime('%Y-%m-%d')
+        today = today_cn()
         
         # 初始化当日数据（自动从最近有数据的交易日继承）
         runner.initialize_daily_data(working_date)

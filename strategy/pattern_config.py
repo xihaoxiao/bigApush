@@ -12,21 +12,34 @@ import os
 import yaml
 from pathlib import Path
 
+# 项目根目录（strategy/ 的上一级）
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def _load_yaml_config():
-    """从YAML配置文件加载B1PatternMatch配置"""
-    config_path = Path("/root/quant-csv/config/strategy_params.yaml")
-    
-    if not config_path.exists():
-        return {}
-    
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
-        return config.get('B1PatternMatch', {})
-    except Exception as e:
-        print(f"⚠️ 加载B1PatternMatch配置失败: {e}，使用默认值")
-        return {}
+    """从YAML配置文件加载B1PatternMatch配置
+
+    依次尝试项目内的 config/strategy_params.yaml。
+    早期版本写死了 /root/quant-csv/... 的绝对路径，在 CI（Windows/Linux 容器）
+    上必然 Permission denied，导致 B1 匹配整体失效。
+    """
+    candidates = [
+        _PROJECT_ROOT / "config" / "strategy_params.yaml",
+        Path("config/strategy_params.yaml"),
+    ]
+
+    for config_path in candidates:
+        if not config_path.exists():
+            continue
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f) or {}
+            return config.get('B1PatternMatch', {}) or {}
+        except Exception as e:
+            print(f"⚠️ 加载B1PatternMatch配置失败({config_path}): {e}，使用默认值")
+            return {}
+
+    return {}
 
 
 # 加载YAML配置
