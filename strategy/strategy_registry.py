@@ -353,6 +353,8 @@ class StrategyRegistry:
                     indicators_dict[code] = df_with_indicators
                     result = strategy.select_stocks(df_with_indicators, name)
                     if result:
+                        # 统一信号字段（各策略用的 key 不一致：reasons/reason、close/price）
+                        result = strategy.normalize_signals(result)
                         signals.append({
                             'code': code,
                             'name': name,

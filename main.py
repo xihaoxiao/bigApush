@@ -266,6 +266,8 @@ class QuantSystem:
                     df_ind = sobj.calculate_indicators(df)
                     sl = sobj.select_stocks(df_ind, name)
                     if sl:
+                        # 统一信号字段（各策略用的 key 不一致：reasons/reason、close/price）
+                        sl = sobj.normalize_signals(sl)
                         for s in sl:
                             cat = s.get('category', 'unknown')
                             if category == 'all' or cat == category:

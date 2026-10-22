@@ -152,6 +152,65 @@ class BaseStrategy(ABC):
         if not cls._is_descending(df):
             return df.iloc[::-1].reset_index(drop=True)
         return df
+
+    # ------------------------------------------------------------------
+    # 信号字段归一化
+    #
+    # 各策略产出的信号字段名不统一：
+    #   - 3 个策略用 'reason'（字符串），其余用 'reasons'（列表）
+    #   - 2 个策略用 'price'，其余用 'close'
+    # 导致推送里出现「价格=-」「理由=-」。
+    # 这里在框架边界统一归一化，新增策略不必再关心字段命名。
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def normalize_signal(signal: dict) -> dict:
+        """归一化单个信号的字段（返回新字典，不修改入参）。"""
+        if not isinstance(signal, dict):
+            return signal
+
+        result = dict(signal)
+
+        # reasons / reason 互相补齐
+        reasons = result.get('reasons')
+        if reasons is None:
+            reason = result.get('reason')
+            if reason is None:
+                result['reasons'] = []
+                result['reason'] = ''
+            else:
+                if isinstance(reason, (list, tuple)):
+                    reasons = [str(r) for r in reason]
+                else:
+                    # 逗号分隔的多个理由拆成列表
+                    reasons = [r.strip() for r in str(reason).split(',') if r.strip()]
+                    if not reasons:
+                        reasons = [str(reason)]
+                result['reasons'] = reasons
+                result['reason'] = "; ".join(reasons)
+        else:
+            if isinstance(reasons, str):
+                reasons = [reasons]
+            else:
+                reasons = [str(r) for r in reasons]
+            result['reasons'] = reasons
+            if not result.get('reason'):
+                result['reason'] = "; ".join(reasons)
+
+        # close / price 互相补齐
+        if result.get('close') is None and result.get('price') is not None:
+            result['close'] = result['price']
+        elif result.get('price') is None and result.get('close') is not None:
+            result['price'] = result['close']
+
+        return result
+
+    @classmethod
+    def normalize_signals(cls, signals) -> list:
+        """归一化信号列表。"""
+        if not signals:
+            return []
+        return [cls.normalize_signal(s) for s in signals]
     
     @abstractmethod
     def select_stocks(self, df, stock_name='') -> list:
@@ -213,7 +272,7 @@ class BaseStrategy(ABC):
                     if hasattr(self, '_get_previous_date_with_kline_data'):
                         selection_date = self._get_previous_date_with_kline_data(selection_date)
 
-        return self.select_stocks(df, stock_name)
+        return self.normalize_signals(self.select_stocks(df, stock_name))
     
     def analyze_stock(self, stock_code, stock_name, df):
         """
