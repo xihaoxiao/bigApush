@@ -1,10 +1,15 @@
 # ============================================
-# A股量化选股系统 - 主配置文件模板
+# A股量化选股系统 - 主配置文件模板（已废弃，请改用下面两个文件）
 # ============================================
-# 使用说明：
-# 1. 复制此文件为 config.yaml
-# 2. 填入推送渠道配置（飞书 / Server酱，填哪个就推哪个，都填则同时推送）
-# 3. 不要提交 config.yaml 到Git仓库（已加入.gitignore）
+# 当前配置体系：
+#   config/config.defaults.yaml       仓库内，非敏感配置（自动加载）
+#   config/config.local.yaml          本地凭据（gitignore，模板见 config.local.yaml.example）
+#   环境变量 / GitHub Secrets          最高优先级（CI 推荐）
+#
+# 加载顺序：defaults → config.yaml → local → 环境变量
+# 由 utils/config_loader.py 统一处理。
+#
+# 本文件仅为兼容旧文档保留，复制它不会覆盖 defaults 的内容。
 
 data_dir: data
 
